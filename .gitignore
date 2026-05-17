@@ -2,3 +2,8 @@
 **/obj/
 
 .vscode/
+
+**.db**
+
+**/appsettings.Development.json
+**/appsettings.Production.json
