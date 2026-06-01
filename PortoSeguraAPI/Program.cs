@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 using PortoSeguraAPI.Data;
 using PortoSeguraAPI.Models;
@@ -34,14 +35,50 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 
 builder.Services.AddDbContext<AppDbContext>();
-builder.Services.AddIdentityCore<Usuario>()
+builder.Services.AddIdentityCore<Usuaria>()
     .AddRoles<IdentityRole<int>>()
     .AddEntityFrameworkStores<AppDbContext>()
     .AddDefaultTokenProviders();
 
+
+builder.Services.AddCors(
+    options =>
+    {
+        options.AddPolicy("PermitFrontendLocal", policy =>
+        {
+            policy.SetIsOriginAllowed(origin => new Uri(origin).Host == "localhost")
+                  .AllowAnyHeader()
+                  .AllowAnyMethod();
+        });
+    }
+);
+
 builder.Services.AddScoped<TokenService>();
+builder.Services.AddScoped<BlobStorageService>();
 
 var app = builder.Build();
+
+var databasePath = Path.Combine(Directory.GetCurrentDirectory(), "portosegura.db");
+var databaseWalPath = databasePath + "-wal";
+var databaseShmPath = databasePath + "-shm";
+
+if (File.Exists(databasePath))
+{
+    File.Delete(databasePath);
+}
+
+if (File.Exists(databaseWalPath))
+{
+    File.Delete(databaseWalPath);
+}
+
+if (File.Exists(databaseShmPath))
+{
+    File.Delete(databaseShmPath);
+}
+
+await DbSeeder.SeedAsync(app.Services);
+
 app.UseSwagger();
 
 app.UseSwaggerUI(c =>
@@ -50,6 +87,9 @@ app.UseSwaggerUI(c =>
     c.RoutePrefix = string.Empty; // Set Swagger UI at the app's root
 });
 
+app.UseStaticFiles();
+
+app.UseCors("PermitFrontendLocal");
 app.UseAuthentication();
 app.UseAuthorization();
 

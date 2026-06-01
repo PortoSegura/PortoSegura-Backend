@@ -1,11 +1,12 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using PortoSeguraAPI.Models;
 
 namespace PortoSeguraAPI.Data;
 
-public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbContext<Usuario, IdentityRole<int>, int>(options)
+public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbContext<Usuaria, IdentityRole<int>, int>(options)
 {
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -14,6 +15,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
         {
             optionsBuilder.UseSqlite("Data Source=portosegura.db");
         }
+
+        optionsBuilder.ConfigureWarnings(warnings => warnings.Ignore(RelationalEventId.PendingModelChangesWarning));
     }
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -24,7 +27,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
         builder.Ignore<Microsoft.AspNetCore.Identity.IdentityRoleClaim<int>>();
         builder.Ignore<Microsoft.AspNetCore.Identity.IdentityUserClaim<int>>();
 
-        builder.Entity<Usuario>(entity =>
+        builder.Entity<Usuaria>(entity =>
         {
             entity.ToTable("Usuarios");
         });
@@ -33,6 +36,49 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
         builder.Entity<IdentityRole<int>>().ToTable("Roles");
         builder.Entity<IdentityUserRole<int>>().ToTable("UsuarioRoles");
 
+        builder.Entity<Madrinha>(entity =>
+        {
+            entity.ToTable("Madrinhas");
+            entity.HasOne(m => m.Usuario)
+                .WithOne()
+                .HasForeignKey<Madrinha>(m => m.UsuarioID)
+                .OnDelete(DeleteBehavior.Cascade);
+            
+            entity.HasMany(m => m.Servicos)
+                .WithOne()
+                .HasForeignKey(s => s.MadrinhaId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+        
+        builder.Entity<Servico>(entity =>
+        {
+            entity.ToTable("Servicos");
+        });
+
+        builder.Entity<Solicitacao>(entity =>
+        {
+            entity.ToTable("Solicitacoes");
+            entity.HasOne(s => s.Usuaria)
+                .WithMany(u => u.Solicitacoes)
+                .HasForeignKey(s => s.UsuariaId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(s => s.Madrinha)
+                .WithMany(m => m.Solicitacoes)
+                .HasForeignKey(s => s.MadrinhaId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        builder.Entity<Documento>(entity =>
+        {
+            entity.ToTable("Documentos");
+            entity.HasKey(d => d.NomeArquivo);
+            entity.HasOne<Usuaria>()
+                .WithMany(u => u.Documentos)
+                .HasForeignKey(d => d.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
         // Criando dados iniciais para as roles
         builder.Entity<IdentityRole<int>>().HasData(
             new IdentityRole<int> { Id = 1, Name = "Usuaria", NormalizedName = "USUARIA" },
@@ -40,5 +86,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
             new IdentityRole<int> { Id = 3, Name = "Operador", NormalizedName = "OPERADOR" },
             new IdentityRole<int> { Id = 4, Name = "Admin", NormalizedName = "ADMIN" }
         );
+
+        
     }
 }

@@ -8,15 +8,15 @@ using PortoSeguraAPI.Models;
 public class TokenService
 {
     private readonly IConfiguration _configuration;
-    private readonly UserManager<Usuario> _userManager;
+    private readonly UserManager<Usuaria> _userManager;
 
-    public TokenService(IConfiguration configuration, UserManager<Usuario> userManager)
+    public TokenService(IConfiguration configuration, UserManager<Usuaria> userManager)
     {
         _configuration = configuration;
         _userManager = userManager;
     }
 
-    public async Task<string> GenerateToken(Usuario user)
+    public async Task<string> GenerateToken(Usuaria user)
     {
         var claims = new List<Claim>
         {

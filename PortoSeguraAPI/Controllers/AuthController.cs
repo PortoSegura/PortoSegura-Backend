@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using PortoSeguraAPI.Dtos;
 using PortoSeguraAPI.Enums;
+using PortoSeguraAPI.Data;
 using PortoSeguraAPI.Models;
 
 namespace PortoSeguraAPI.Controllers;
@@ -10,17 +11,19 @@ namespace PortoSeguraAPI.Controllers;
 [Route("api/auth")]
 public class AuthController : ControllerBase
 {
-    private readonly UserManager<Usuario> _userManager;
+    private readonly UserManager<Usuaria> _userManager;
     private readonly TokenService _tokenService;
-    
-    public AuthController(UserManager<Usuario> userManager, TokenService tokenService)
+    private readonly AppDbContext _context;
+
+    public AuthController(UserManager<Usuaria> userManager, TokenService tokenService, AppDbContext context)
     {
         _userManager = userManager;
         _tokenService = tokenService;
+        _context = context;
     }
 
     [HttpPost("cadastrar-usuaria")]
-    public async Task<IActionResult> Cadastrar([FromBody] CadastroUsuariaRequest dto)
+    public async Task<IActionResult> CadastrarUsuaria([FromBody] CadastroUsuariaRequest dto)
     {
         var usuarioExistente = await _userManager.FindByEmailAsync(dto.Email);
         if (usuarioExistente != null)
@@ -28,14 +31,21 @@ public class AuthController : ControllerBase
             return BadRequest(new { mensagem = "Este e-mail já está em uso." });
         }
 
-        var novoUsuario = new Usuario
+        var novoUsuario = new Usuaria
         {
             Nome = dto.Nome,
             Email = dto.Email,
             Telefone = dto.Telefone,
             UserName = dto.Email,
+            Bio = dto.Bio,
             Status = UserStatus.Pendente,
-            DataCriacao = DateTime.UtcNow
+            DataCriacao = DateTime.UtcNow,
+            Estado = dto.Estado,
+            Cidade = dto.Cidade,
+            VideoVerificacao = dto.VideoVerificacao,
+            urlLinkedin = dto.Linkedin ?? string.Empty,
+            urlInstagram = dto.Instagram ?? string.Empty,
+            urlFacebook = dto.Facebook ?? string.Empty
         };
 
         var resultado = await _userManager.CreateAsync(novoUsuario, dto.Senha);
@@ -47,6 +57,77 @@ public class AuthController : ControllerBase
         }
 
         return BadRequest(resultado.Errors);
+    }
+
+    [HttpPost("cadastrar-madrinha")]
+    public async Task<IActionResult> CadastrarMadrinha([FromBody] CadastroMadrinhaRequest dto)
+    {
+        var usuarioExistente = await _userManager.FindByEmailAsync(dto.Email);
+        if (usuarioExistente != null)
+        {
+            return BadRequest(new { mensagem = "Este e-mail já está em uso." });
+        }
+
+        await using var transaction = await _context.Database.BeginTransactionAsync();
+
+        var novaUsuario = new Usuaria
+        {
+            Nome = dto.Nome,
+            Email = dto.Email,
+            Telefone = dto.Telefone,
+            UserName = dto.Email,
+            Bio = dto.Bio,
+            Status = UserStatus.Pendente,
+            DataCriacao = DateTime.UtcNow,
+            Estado = dto.Estado,
+            Cidade = dto.Cidade,
+            VideoVerificacao = dto.VideoVerificacao,
+            urlLinkedin = dto.Linkedin ?? string.Empty,
+            urlInstagram = dto.Instagram ?? string.Empty,
+            urlFacebook = dto.Facebook ?? string.Empty
+        };
+
+        var resultadoUsuario = await _userManager.CreateAsync(novaUsuario, dto.Senha);
+        if (!resultadoUsuario.Succeeded)
+        {
+            await transaction.RollbackAsync();
+            return BadRequest(resultadoUsuario.Errors);
+        }
+
+        var resultadoRoleUsuaria = await _userManager.AddToRoleAsync(novaUsuario, "Usuaria");
+        if (!resultadoRoleUsuaria.Succeeded)
+        {
+            await transaction.RollbackAsync();
+            return BadRequest(resultadoRoleUsuaria.Errors);
+        }
+
+        var resultadoRoleMadrinha = await _userManager.AddToRoleAsync(novaUsuario, "Madrinha");
+        if (!resultadoRoleMadrinha.Succeeded)
+        {
+            await transaction.RollbackAsync();
+            return BadRequest(resultadoRoleMadrinha.Errors);
+        }
+
+        var madrinha = new Madrinha
+        {
+            UsuarioID = novaUsuario.Id,
+            PrecoDiaria = dto.PrecoDiaria,
+            Motivacao = dto.Motivacao,
+            VerificadoIdentidade = false,
+            VerificadoResidencia = false,
+            TrilhaCursoCompleto = false,
+            DataCriacao = DateTime.UtcNow,
+            Usuario = novaUsuario
+        };
+
+        _context.Add(madrinha);
+        await _context.SaveChangesAsync();
+        await transaction.CommitAsync();
+
+        return Ok(new
+        {
+            mensagem = "Cadastro de madrinha realizado com sucesso! Aguardando aprovação."
+        });
     }
 
     [HttpPost("login")]
@@ -61,7 +142,7 @@ public class AuthController : ControllerBase
         var senhaValida = await _userManager.CheckPasswordAsync(usuario, dto.Senha);
         if (!senhaValida)
             return Unauthorized(new { mensagem = "E-mail ou senha incorretos." });
-        
+
         // 3. AVALIA A SUA REGRA DE NEGÓCIO (Aprovação)
         if (usuario.Status != UserStatus.Ativo)
             return StatusCode(403, new { mensagem = "Sua conta aguarda a aprovação de um operador." });
@@ -77,6 +158,13 @@ public class AuthController : ControllerBase
                 usuario.Id,
                 usuario.Nome,
                 usuario.Email,
+                usuario.Telefone,
+                usuario.Bio,
+                usuario.Estado,
+                usuario.Cidade,
+                usuario.urlLinkedin,
+                usuario.urlInstagram,
+                usuario.urlFacebook,
                 Roles = roles.ToList()
             }
         });
