@@ -6,6 +6,9 @@ using PortoSeguraAPI.Data;
 using PortoSeguraAPI.Models;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using Npgsql.EntityFrameworkCore.PostgreSQL;
+
+AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -36,7 +39,9 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
-builder.Services.AddDbContext<AppDbContext>();
+builder.Services.AddDbContext<AppDbContext>(options => 
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+
 builder.Services.AddIdentityCore<Usuaria>()
     .AddRoles<IdentityRole<int>>()
     .AddEntityFrameworkStores<AppDbContext>()
@@ -61,25 +66,6 @@ builder.Services.AddScoped<BlobStorageService>();
 var app = builder.Build();
 
 app.MapHealthChecks("/health");
-
-var databasePath = Path.Combine(Directory.GetCurrentDirectory(), "portosegura.db");
-var databaseWalPath = databasePath + "-wal";
-var databaseShmPath = databasePath + "-shm";
-
-if (File.Exists(databasePath))
-{
-    File.Delete(databasePath);
-}
-
-if (File.Exists(databaseWalPath))
-{
-    File.Delete(databaseWalPath);
-}
-
-if (File.Exists(databaseShmPath))
-{
-    File.Delete(databaseShmPath);
-}
 
 await DbSeeder.SeedAsync(app.Services);
 

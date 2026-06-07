@@ -11,11 +11,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
-        if (!optionsBuilder.IsConfigured)
-        {
-            optionsBuilder.UseSqlite("Data Source=portosegura.db");
-        }
-
         optionsBuilder.ConfigureWarnings(warnings => warnings.Ignore(RelationalEventId.PendingModelChangesWarning));
     }
     protected override void OnModelCreating(ModelBuilder builder)
@@ -47,6 +42,25 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
             entity.HasMany(m => m.Servicos)
                 .WithOne()
                 .HasForeignKey(s => s.MadrinhaId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<Avaliacao>(entity =>
+        {
+            entity.ToTable("Avaliacoes");
+            entity.HasOne(a => a.Usuaria)
+                .WithMany(u => u.Avaliacoes)
+                .HasForeignKey(a => a.UsuariaId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(a => a.Madrinha)
+                .WithMany(m => m.Avaliacoes)
+                .HasForeignKey(a => a.MadrinhaId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(a => a.Solicitacao)
+                .WithMany(s => s.Avaliacoes)
+                .HasForeignKey(a => a.SolicitacaoId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
         
