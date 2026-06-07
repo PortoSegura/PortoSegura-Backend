@@ -15,6 +15,8 @@ builder.Services.AddControllers();
 
 builder.Services.AddAuthorization();
 
+builder.Services.AddHealthChecks();
+
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -57,6 +59,8 @@ builder.Services.AddScoped<TokenService>();
 builder.Services.AddScoped<BlobStorageService>();
 
 var app = builder.Build();
+
+app.MapHealthChecks("/health");
 
 var databasePath = Path.Combine(Directory.GetCurrentDirectory(), "portosegura.db");
 var databaseWalPath = databasePath + "-wal";
