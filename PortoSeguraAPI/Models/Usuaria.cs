@@ -21,5 +21,6 @@ public class Usuaria: IdentityUser<int>
     // Propriedades de navegação
     public virtual ICollection<Solicitacao> Solicitacoes { get; set; } = null!;
     public virtual ICollection<Documento> Documentos { get; set; } = null!;
+    public virtual ICollection<Avaliacao> Avaliacoes { get; set; } = null!;
 
 }

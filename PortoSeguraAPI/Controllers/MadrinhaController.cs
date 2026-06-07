@@ -38,7 +38,8 @@ public class MadrinhaController : ControllerBase
                 Cidade = m.Usuario.Cidade,
                 Estado = m.Usuario.Estado,
                 Servicos = m.Servicos.Select(s => s.Descricao).ToList(),
-                QtdSolicitacoes = m.Solicitacoes.Select(s => s.Status == "Finalizada").Count()
+                QtdSolicitacoes = m.Solicitacoes.Count(s => s.Status == "Finalizada"),
+                MediaAvaliacao = m.Avaliacoes.Any() ? m.Avaliacoes .Average(a => a.Nota) : 0
             })
             .ToListAsync();
 
@@ -50,9 +51,6 @@ public class MadrinhaController : ControllerBase
     public async Task<IActionResult> ObterMadrinhaPorId(int id) {
 
         var madrinha = await _context.Set<Madrinha>()
-            .Include(m => m.Usuario)
-            .Include(m => m.Servicos)
-            .Include(m => m.Solicitacoes)
             .Where(m => m.Id == id)
             .Select(m => new MadrinhaSummaryDto
             {
@@ -65,7 +63,16 @@ public class MadrinhaController : ControllerBase
                 Cidade = m.Usuario.Cidade,
                 Estado = m.Usuario.Estado,
                 Servicos = m.Servicos.Select(s => s.Descricao).ToList(),
-                QtdSolicitacoes = m.Solicitacoes.Select(s => s.Status == "Finalizada").Count()
+                QtdSolicitacoes = m.Solicitacoes.Count(s => s.Status == "Finalizada"),
+                MediaAvaliacao = m.Avaliacoes.Any() ? m.Avaliacoes.Average(a => a.Nota) : 0,
+                Avaliacoes = m.Avaliacoes.Select(a => new AvaliacaoSummaryDto
+                {
+                    Id = a.Id,
+                    Nota = a.Nota,
+                    Comentario = a.Comentario ?? string.Empty,
+                    DataCriacao = a.DataCriacao,
+                    NomeUsuaria = a.Usuaria.Nome
+                }).ToList()
             })
             .FirstOrDefaultAsync();
 

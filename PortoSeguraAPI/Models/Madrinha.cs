@@ -17,4 +17,5 @@ public class Madrinha
     public virtual Usuaria Usuario { get; set; } = null!;
     public virtual ICollection<Servico> Servicos { get; set; } = null!;
     public virtual ICollection<Solicitacao> Solicitacoes { get; set; } = null!;
+    public virtual ICollection<Avaliacao> Avaliacoes { get; set; } = null!;
 }

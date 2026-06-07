@@ -15,7 +15,8 @@ public class MadrinhaSummaryDto
     public string Cidade { get; set; } = string.Empty;
     public string Estado { get; set; } = string.Empty;
     public int QtdSolicitacoes { get; set; }
-
+    public double MediaAvaliacao { get; set; }
+    public ICollection<AvaliacaoSummaryDto> Avaliacoes { get; set; } = new List<AvaliacaoSummaryDto>();
     // Servicos descrições
     public List<string> Servicos { get; set; } = new List<string>();
 }

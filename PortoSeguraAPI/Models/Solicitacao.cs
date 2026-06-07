@@ -18,5 +18,6 @@ public class Solicitacao
     // Propriedades de navegação
     public virtual Usuaria Usuaria { get; set; } = null!;
     public virtual Madrinha Madrinha { get; set; } = null!;
+    public virtual ICollection<Avaliacao> Avaliacoes { get; set; } = null!;
 
 }
