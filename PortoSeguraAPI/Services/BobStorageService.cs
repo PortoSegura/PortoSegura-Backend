@@ -40,4 +40,32 @@ public class BlobStorageService
 
         return sasUri.ToString();
     }
+
+    public string? GerarUrlDeLeitura(string? nomeDoArquivo)
+    {
+        if (string.IsNullOrWhiteSpace(nomeDoArquivo)) return null;
+
+        // Se já for uma URL completa, retorna diretamente
+        if (nomeDoArquivo.StartsWith("http://") || nomeDoArquivo.StartsWith("https://"))
+        {
+            return nomeDoArquivo;
+        }
+
+        var blobServiceClient = new BlobServiceClient(_connectionString);
+        var containerClient = blobServiceClient.GetBlobContainerClient(_containerName);
+        var blobClient = containerClient.GetBlobClient(nomeDoArquivo);
+
+        var sasBuilder = new BlobSasBuilder
+        {
+            BlobContainerName = _containerName,
+            BlobName = nomeDoArquivo,
+            Resource = "b",
+            ExpiresOn = DateTimeOffset.UtcNow.AddHours(2) // Expira em 2 horas
+        };
+
+        sasBuilder.SetPermissions(BlobSasPermissions.Read);
+
+        var sasUri = blobClient.GenerateSasUri(sasBuilder);
+        return sasUri.ToString();
+    }
 }

@@ -16,11 +16,13 @@ public class UsuariaController : ControllerBase
 {
     private readonly UserManager<Usuaria> _userManager;
     private readonly AppDbContext _context;
+    private readonly BlobStorageService _blobStorageService;
 
-    public UsuariaController(UserManager<Usuaria> userManager, AppDbContext context)
+    public UsuariaController(UserManager<Usuaria> userManager, AppDbContext context, BlobStorageService blobStorageService)
     {
         _userManager = userManager;
         _context = context;
+        _blobStorageService = blobStorageService;
     }
 
     [HttpGet]
@@ -40,7 +42,8 @@ public class UsuariaController : ControllerBase
             usuario.Telefone,
             usuario.Bio,
             usuario.Status,
-            usuario.DataCriacao
+            usuario.DataCriacao,
+            FotoPerfilUrl = _blobStorageService.GerarUrlDeLeitura(usuario.FotoPerfilUrl)
         });
     }
 
@@ -88,6 +91,12 @@ public class UsuariaController : ControllerBase
             possuiAtualizacao = true;
         }
 
+        if (request.FotoPerfilUrl != null)
+        {
+            usuario.FotoPerfilUrl = string.IsNullOrWhiteSpace(request.FotoPerfilUrl) ? null : request.FotoPerfilUrl.Trim();
+            possuiAtualizacao = true;
+        }
+
         if (!possuiAtualizacao)
         {
             return BadRequest(new { mensagem = "Informe ao menos um campo para atualização." });
@@ -107,7 +116,8 @@ public class UsuariaController : ControllerBase
             usuario.Telefone,
             usuario.Bio,
             usuario.Status,
-            usuario.DataCriacao
+            usuario.DataCriacao,
+            FotoPerfilUrl = _blobStorageService.GerarUrlDeLeitura(usuario.FotoPerfilUrl)
         });
     }
 

@@ -12,36 +12,53 @@ using PortoSeguraAPI.Models;
 public class MadrinhaController : ControllerBase
 {
     private readonly AppDbContext _context;
+    private readonly BlobStorageService _blobStorageService;
 
-    public MadrinhaController(AppDbContext context, IWebHostEnvironment environment)
+    public MadrinhaController(AppDbContext context, IWebHostEnvironment environment, BlobStorageService blobStorageService)
     {
         _context = context;
+        _blobStorageService = blobStorageService;
     }
 
     [HttpGet]
     [Authorize]
     public async Task<IActionResult> ObterMadrinhas([FromQuery] string? destino, [FromQuery] decimal? precoMaximo ) {
 
-        var madrinhas = await _context.Set<Madrinha>()
+        var madrinhasList = await _context.Set<Madrinha>()
             .Include(m => m.Usuario)
             .Include(m => m.Servicos)
             .Include(m => m.Solicitacoes)
             .Where(m => (string.IsNullOrEmpty(destino) || m.Usuario.Cidade.Contains(destino)) && (!precoMaximo.HasValue || m.PrecoDiaria <= precoMaximo))
-            .Select(m => new MadrinhaSummaryDto
+            .Select(m => new
             {
-                Id = m.Id,
-                PrecoDiaria = m.PrecoDiaria,
-                FotoPerfilUrl = m.Usuario.FotoPerfilUrl,
-                Motivacao = m.Motivacao,
+                m.Id,
+                m.PrecoDiaria,
+                RawFotoPerfilUrl = m.Usuario.FotoPerfilUrl,
+                m.Motivacao,
                 UsuarioId = m.Usuario.Id,
                 Nome = m.Usuario.Nome,
                 Cidade = m.Usuario.Cidade,
                 Estado = m.Usuario.Estado,
                 Servicos = m.Servicos.Select(s => s.Descricao).ToList(),
                 QtdSolicitacoes = m.Solicitacoes.Count(s => s.Status == "Concluida" || s.Status == "Avaliada"),
-                MediaAvaliacao = m.Avaliacoes.Any() ? m.Avaliacoes .Average(a => a.Nota) : 0
+                MediaAvaliacao = m.Avaliacoes.Any() ? m.Avaliacoes.Average(a => a.Nota) : 0
             })
             .ToListAsync();
+
+        var madrinhas = madrinhasList.Select(m => new MadrinhaSummaryDto
+        {
+            Id = m.Id,
+            PrecoDiaria = m.PrecoDiaria,
+            FotoPerfilUrl = _blobStorageService.GerarUrlDeLeitura(m.RawFotoPerfilUrl),
+            Motivacao = m.Motivacao,
+            UsuarioId = m.UsuarioId,
+            Nome = m.Nome,
+            Cidade = m.Cidade,
+            Estado = m.Estado,
+            Servicos = m.Servicos,
+            QtdSolicitacoes = m.QtdSolicitacoes,
+            MediaAvaliacao = m.MediaAvaliacao
+        }).ToList();
 
         return Ok(madrinhas);
     }
@@ -50,14 +67,14 @@ public class MadrinhaController : ControllerBase
     [Authorize]
     public async Task<IActionResult> ObterMadrinhaPorId(int id) {
 
-        var madrinha = await _context.Set<Madrinha>()
+        var madrinhaDb = await _context.Set<Madrinha>()
             .Where(m => m.Id == id)
-            .Select(m => new MadrinhaSummaryDto
+            .Select(m => new
             {
-                Id = m.Id,
-                PrecoDiaria = m.PrecoDiaria,
-                FotoPerfilUrl = m.Usuario.FotoPerfilUrl,
-                Motivacao = m.Motivacao,
+                m.Id,
+                m.PrecoDiaria,
+                RawFotoPerfilUrl = m.Usuario.FotoPerfilUrl,
+                m.Motivacao,
                 UsuarioId = m.Usuario.Id,
                 Nome = m.Usuario.Nome,
                 Cidade = m.Usuario.Cidade,
@@ -76,6 +93,25 @@ public class MadrinhaController : ControllerBase
             })
             .FirstOrDefaultAsync();
 
+        if (madrinhaDb == null)
+            return NotFound(new { mensagem = "Madrinha não encontrada." });
+
+        var madrinha = new MadrinhaSummaryDto
+        {
+            Id = madrinhaDb.Id,
+            PrecoDiaria = madrinhaDb.PrecoDiaria,
+            FotoPerfilUrl = _blobStorageService.GerarUrlDeLeitura(madrinhaDb.RawFotoPerfilUrl),
+            Motivacao = madrinhaDb.Motivacao,
+            UsuarioId = madrinhaDb.UsuarioId,
+            Nome = madrinhaDb.Nome,
+            Cidade = madrinhaDb.Cidade,
+            Estado = madrinhaDb.Estado,
+            Servicos = madrinhaDb.Servicos,
+            QtdSolicitacoes = madrinhaDb.QtdSolicitacoes,
+            MediaAvaliacao = madrinhaDb.MediaAvaliacao,
+            Avaliacoes = madrinhaDb.Avaliacoes
+        };
+
         return Ok(madrinha);
     }
 
@@ -90,14 +126,14 @@ public class MadrinhaController : ControllerBase
             return Unauthorized(new { mensagem = "Usuária não autenticada." });
         }
 
-        var madrinha = await _context.Set<Madrinha>()
+        var madrinhaDb = await _context.Set<Madrinha>()
             .AsNoTracking()
             .Where(m => m.UsuarioID == usuariaAutenticada.Id)
             .Select(m => new 
             {
                 Id = m.Id,
                 PrecoDiaria = m.PrecoDiaria,
-                FotoPerfilUrl = m.Usuario.FotoPerfilUrl,
+                RawFotoPerfilUrl = m.Usuario.FotoPerfilUrl,
                 Motivacao = m.Motivacao,
                 UsuarioId = m.Usuario.Id,
                 Nome = m.Usuario.Nome,
@@ -124,8 +160,29 @@ public class MadrinhaController : ControllerBase
             })
             .FirstOrDefaultAsync();
 
-        if (madrinha == null)
+        if (madrinhaDb == null)
             return NotFound(new { mensagem = "Perfil de madrinha não encontrado." });
+
+        var madrinha = new
+        {
+            madrinhaDb.Id,
+            madrinhaDb.PrecoDiaria,
+            FotoPerfilUrl = _blobStorageService.GerarUrlDeLeitura(madrinhaDb.RawFotoPerfilUrl),
+            madrinhaDb.Motivacao,
+            madrinhaDb.UsuarioId,
+            madrinhaDb.Nome,
+            madrinhaDb.Cidade,
+            madrinhaDb.Estado,
+            madrinhaDb.Bio,
+            madrinhaDb.Telefone,
+            madrinhaDb.Email,
+            madrinhaDb.Linkedin,
+            madrinhaDb.Instagram,
+            madrinhaDb.Facebook,
+            madrinhaDb.Solicitacaoes,
+            madrinhaDb.Servicos,
+            madrinhaDb.QtdSolicitacoes
+        };
 
         return Ok(madrinha);
     }

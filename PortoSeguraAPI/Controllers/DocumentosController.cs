@@ -38,8 +38,9 @@ public class DocumentosController : ControllerBase
             { "application/pdf", ".pdf" },
             { "image/jpeg", ".jpg" },
             { "image/png", ".png" },
-            {"video/webm", ".webm" },
-            {"video/mp4", ".mp4" }
+            { "image/webp", ".webp" },
+            { "video/webm", ".webm" },
+            { "video/mp4", ".mp4" }
         };
 
         if (!extensoesPermitidas.ContainsKey(request.TipoMime.ToLower()))

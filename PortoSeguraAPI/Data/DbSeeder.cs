@@ -87,6 +87,7 @@ public static class DbSeeder
         await EnsureRoleAssignmentAsync(userManager, usuariaAtiva, "Usuaria");
         await EnsureRoleAssignmentAsync(userManager, usuariaPendente, "Usuaria");
         await EnsureRoleAssignmentAsync(userManager, madrinhaUsuario, "Madrinha");
+        await EnsureRoleAssignmentAsync(userManager, madrinhaUsuario, "Usuaria");
         await EnsureRoleAssignmentAsync(userManager, operador, "Operador");
         await EnsureRoleAssignmentAsync(userManager, admin, "Admin");
 

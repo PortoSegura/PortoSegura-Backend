@@ -15,4 +15,5 @@ public class CadastroMadrinhaRequest
     public string? Linkedin { get; set; }
     public string? Instagram { get; set; }
     public string? Facebook { get; set; }
+    public string? FotoPerfilUrl { get; set; }
 }

@@ -14,12 +14,14 @@ public class AuthController : ControllerBase
     private readonly UserManager<Usuaria> _userManager;
     private readonly TokenService _tokenService;
     private readonly AppDbContext _context;
+    private readonly BlobStorageService _blobStorageService;
 
-    public AuthController(UserManager<Usuaria> userManager, TokenService tokenService, AppDbContext context)
+    public AuthController(UserManager<Usuaria> userManager, TokenService tokenService, AppDbContext context, BlobStorageService blobStorageService)
     {
         _userManager = userManager;
         _tokenService = tokenService;
         _context = context;
+        _blobStorageService = blobStorageService;
     }
 
     [HttpPost("cadastrar-usuaria")]
@@ -45,7 +47,8 @@ public class AuthController : ControllerBase
             VideoVerificacao = dto.VideoVerificacao,
             urlLinkedin = dto.Linkedin ?? string.Empty,
             urlInstagram = dto.Instagram ?? string.Empty,
-            urlFacebook = dto.Facebook ?? string.Empty
+            urlFacebook = dto.Facebook ?? string.Empty,
+            FotoPerfilUrl = dto.FotoPerfilUrl
         };
 
         var resultado = await _userManager.CreateAsync(novoUsuario, dto.Senha);
@@ -84,7 +87,8 @@ public class AuthController : ControllerBase
             VideoVerificacao = dto.VideoVerificacao,
             urlLinkedin = dto.Linkedin ?? string.Empty,
             urlInstagram = dto.Instagram ?? string.Empty,
-            urlFacebook = dto.Facebook ?? string.Empty
+            urlFacebook = dto.Facebook ?? string.Empty,
+            FotoPerfilUrl = dto.FotoPerfilUrl
         };
 
         var resultadoUsuario = await _userManager.CreateAsync(novaUsuario, dto.Senha);
@@ -165,6 +169,7 @@ public class AuthController : ControllerBase
                 usuario.urlLinkedin,
                 usuario.urlInstagram,
                 usuario.urlFacebook,
+                FotoPerfilUrl = _blobStorageService.GerarUrlDeLeitura(usuario.FotoPerfilUrl),
                 Roles = roles.ToList()
             }
         });

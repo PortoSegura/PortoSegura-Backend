@@ -12,11 +12,13 @@ public class SolicitacoesController : ControllerBase
 {
     private readonly AppDbContext _context;
     private readonly UserManager<Usuaria> _userManager;
+    private readonly BlobStorageService _blobStorageService;
 
-    public SolicitacoesController(AppDbContext context, UserManager<Usuaria> userManager)
+    public SolicitacoesController(AppDbContext context, UserManager<Usuaria> userManager, BlobStorageService blobStorageService)
     {
         _context = context;
         _userManager = userManager;
+        _blobStorageService = blobStorageService;
     }
 
     [HttpPost]
@@ -85,7 +87,7 @@ public class SolicitacoesController : ControllerBase
             return Unauthorized(new { mensagem = "Usuária não autenticada." });
         }
 
-        var solicitacoes = await _context.Set<Solicitacao>()
+        var solicitacoesDb = await _context.Set<Solicitacao>()
             .AsNoTracking()
             .Include(s => s.Madrinha)
                 .ThenInclude(m => m.Usuario)
@@ -112,7 +114,8 @@ public class SolicitacoesController : ControllerBase
                     s.Madrinha.PrecoDiaria,
                     s.Madrinha.VerificadoIdentidade,
                     s.Madrinha.VerificadoResidencia,
-                    s.Madrinha.TrilhaCursoCompleto
+                    s.Madrinha.TrilhaCursoCompleto,
+                    RawFotoPerfilUrl = s.Madrinha.Usuario.FotoPerfilUrl
                 },
                 Avaliacao = s.Avaliacoes.Select(a => new
                 {
@@ -123,6 +126,33 @@ public class SolicitacoesController : ControllerBase
                 }).FirstOrDefault()
             })
             .ToListAsync();
+
+        var solicitacoes = solicitacoesDb.Select(s => new
+        {
+            s.Id,
+            s.UsuariaId,
+            s.MadrinhaId,
+            s.Descricao,
+            s.Destino,
+            s.DataInicio,
+            s.DataFim,
+            s.QtdDiarias,
+            s.Valor,
+            s.Status,
+            s.DataCriacao,
+            Madrinha = new
+            {
+                s.Madrinha.Id,
+                s.Madrinha.Nome,
+                s.Madrinha.Telefone,
+                s.Madrinha.PrecoDiaria,
+                s.Madrinha.VerificadoIdentidade,
+                s.Madrinha.VerificadoResidencia,
+                s.Madrinha.TrilhaCursoCompleto,
+                FotoPerfilUrl = _blobStorageService.GerarUrlDeLeitura(s.Madrinha.RawFotoPerfilUrl)
+            },
+            s.Avaliacao
+        }).ToList();
 
         return Ok(solicitacoes);
     }
@@ -148,7 +178,7 @@ public class SolicitacoesController : ControllerBase
             return NotFound(new { mensagem = "Perfil de madrinha não encontrado." });
         
     
-        var solicitacoes = await _context.Set<Solicitacao>()
+        var solicitacoesDb = await _context.Set<Solicitacao>()
             .AsNoTracking()
             .Include(s => s.Madrinha)
                 .ThenInclude(m => m.Usuario)
@@ -175,7 +205,8 @@ public class SolicitacoesController : ControllerBase
                     Telefone = s.Status == "Aceita" ? s.Usuaria.Telefone : null,
                     s.Usuaria.Bio,
                     s.Usuaria.Estado,
-                    s.Usuaria.Cidade
+                    s.Usuaria.Cidade,
+                    RawFotoPerfilUrl = s.Usuaria.FotoPerfilUrl
                 },
                 Avaliacao = s.Avaliacoes.Select(a => new
                 {
@@ -186,6 +217,32 @@ public class SolicitacoesController : ControllerBase
                 }).FirstOrDefault()
             })
             .ToListAsync();
+
+        var solicitacoes = solicitacoesDb.Select(s => new
+        {
+            s.Id,
+            s.UsuariaId,
+            s.MadrinhaId,
+            s.Descricao,
+            s.DataInicio,
+            s.DataFim,
+            s.QtdDiarias,
+            s.Valor,
+            s.Status,
+            s.DataCriacao,
+            Usuaria = new
+            {
+                s.Usuaria.Id,
+                s.Usuaria.Nome,
+                s.Usuaria.Email,
+                s.Usuaria.Telefone,
+                s.Usuaria.Bio,
+                s.Usuaria.Estado,
+                s.Usuaria.Cidade,
+                FotoPerfilUrl = _blobStorageService.GerarUrlDeLeitura(s.Usuaria.RawFotoPerfilUrl)
+            },
+            s.Avaliacao
+        }).ToList();
 
         return Ok(solicitacoes);
     }
