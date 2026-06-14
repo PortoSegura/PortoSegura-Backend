@@ -30,17 +30,32 @@ public class AvaliacaoController : ControllerBase
         var usuaria = await ObterUsuarioAutenticadoAsync();
         if (usuaria == null) return Unauthorized( new { message = "Usuária não autenticada." });
         if (solicitacao.UsuariaId != usuaria.Id && solicitacao.MadrinhaId != usuaria.Id) return Forbid();
+
+        if (solicitacao.Status != "Concluida")
+        {
+            return BadRequest(new { message = "Apenas solicitações concluídas podem ser avaliadas." });
+        }
+
+        if (request.Nota < 1 || request.Nota > 5)
+        {
+            return BadRequest(new { message = "A nota deve ser entre 1 e 5." });
+        }
         
         var avaliacao = new Avaliacao
         {
             SolicitacaoId = request.SolicitacaoId,
             MadrinhaId = request.MadrinhaId,
+            UsuariaId = usuaria.Id,
             Nota = request.Nota,
             Comentario = request.Comentario,
             IsAvaliacaoMadrinha = solicitacao.UsuariaId == usuaria.Id
         };
 
         _context.Set<Avaliacao>().Add(avaliacao);
+
+        solicitacao.Status = "Avaliada";
+        _context.Set<Solicitacao>().Update(solicitacao);
+
         await _context.SaveChangesAsync();
 
         return Ok(new { message = "Avaliação criada com sucesso!" });

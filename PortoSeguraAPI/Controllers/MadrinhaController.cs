@@ -38,7 +38,7 @@ public class MadrinhaController : ControllerBase
                 Cidade = m.Usuario.Cidade,
                 Estado = m.Usuario.Estado,
                 Servicos = m.Servicos.Select(s => s.Descricao).ToList(),
-                QtdSolicitacoes = m.Solicitacoes.Count(s => s.Status == "Finalizada"),
+                QtdSolicitacoes = m.Solicitacoes.Count(s => s.Status == "Concluida" || s.Status == "Avaliada"),
                 MediaAvaliacao = m.Avaliacoes.Any() ? m.Avaliacoes .Average(a => a.Nota) : 0
             })
             .ToListAsync();
@@ -63,7 +63,7 @@ public class MadrinhaController : ControllerBase
                 Cidade = m.Usuario.Cidade,
                 Estado = m.Usuario.Estado,
                 Servicos = m.Servicos.Select(s => s.Descricao).ToList(),
-                QtdSolicitacoes = m.Solicitacoes.Count(s => s.Status == "Finalizada"),
+                QtdSolicitacoes = m.Solicitacoes.Count(s => s.Status == "Concluida" || s.Status == "Avaliada"),
                 MediaAvaliacao = m.Avaliacoes.Any() ? m.Avaliacoes.Average(a => a.Nota) : 0,
                 Avaliacoes = m.Avaliacoes.Select(a => new AvaliacaoSummaryDto
                 {

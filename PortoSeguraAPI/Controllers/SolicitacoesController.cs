@@ -113,7 +113,14 @@ public class SolicitacoesController : ControllerBase
                     s.Madrinha.VerificadoIdentidade,
                     s.Madrinha.VerificadoResidencia,
                     s.Madrinha.TrilhaCursoCompleto
-                }
+                },
+                Avaliacao = s.Avaliacoes.Select(a => new
+                {
+                    a.Id,
+                    a.Nota,
+                    a.Comentario,
+                    a.DataCriacao
+                }).FirstOrDefault()
             })
             .ToListAsync();
 
@@ -169,7 +176,14 @@ public class SolicitacoesController : ControllerBase
                     s.Usuaria.Bio,
                     s.Usuaria.Estado,
                     s.Usuaria.Cidade
-                }
+                },
+                Avaliacao = s.Avaliacoes.Select(a => new
+                {
+                    a.Id,
+                    a.Nota,
+                    a.Comentario,
+                    a.DataCriacao
+                }).FirstOrDefault()
             })
             .ToListAsync();
 
@@ -209,6 +223,44 @@ public class SolicitacoesController : ControllerBase
         }
 
         solicitacao.Status = "Cancelada";
+        await _context.SaveChangesAsync();
+
+        return Ok(MapearSolicitacao(solicitacao));
+    }
+
+    [HttpPost("{id}/concluir")]
+    [Authorize]
+    public async Task<IActionResult> ConcluirSolicitacao(int id)
+    {
+        var usuariaAutenticada = await ObterUsuarioAutenticadoAsync();
+        if (usuariaAutenticada == null)
+        {
+            return Unauthorized(new { mensagem = "Usuária não autenticada." });
+        }
+
+        var solicitacao = await _context.Set<Solicitacao>()
+            .FirstOrDefaultAsync(s => s.Id == id);
+
+        if (solicitacao == null)
+        {
+            return NotFound(new { mensagem = "Solicitação não encontrada." });
+        }
+
+        var madrinhaAutenticada = await _context.Set<Madrinha>()
+            .AsNoTracking()
+            .FirstOrDefaultAsync(m => m.UsuarioID == usuariaAutenticada.Id);
+
+        if (solicitacao.UsuariaId != usuariaAutenticada.Id && (madrinhaAutenticada == null || solicitacao.MadrinhaId != madrinhaAutenticada.Id))
+        {
+            return Forbid();
+        }
+
+        if (solicitacao.Status != "Aceita")
+        {
+            return BadRequest(new { mensagem = "Apenas solicitações aceitas podem ser concluídas." });
+        }
+
+        solicitacao.Status = "Concluida";
         await _context.SaveChangesAsync();
 
         return Ok(MapearSolicitacao(solicitacao));
