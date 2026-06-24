@@ -53,7 +53,7 @@ builder.Services.AddCors(
     {
         options.AddPolicy("PermitFrontendLocal", policy =>
         {
-            policy.SetIsOriginAllowed(origin => new Uri(origin).Host == "localhost")
+            policy.AllowAnyOrigin()
                   .AllowAnyHeader()
                   .AllowAnyMethod();
         });

@@ -43,6 +43,7 @@ public class UsuariaController : ControllerBase
             usuario.Bio,
             usuario.Status,
             usuario.DataCriacao,
+            usuario.SaldoCreditos,
             FotoPerfilUrl = _blobStorageService.GerarUrlDeLeitura(usuario.FotoPerfilUrl)
         });
     }
@@ -117,6 +118,7 @@ public class UsuariaController : ControllerBase
             usuario.Bio,
             usuario.Status,
             usuario.DataCriacao,
+            usuario.SaldoCreditos,
             FotoPerfilUrl = _blobStorageService.GerarUrlDeLeitura(usuario.FotoPerfilUrl)
         });
     }

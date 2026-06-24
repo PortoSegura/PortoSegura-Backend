@@ -88,13 +88,34 @@ public class MadrinhaController : ControllerBase
                     Nota = a.Nota,
                     Comentario = a.Comentario ?? string.Empty,
                     DataCriacao = a.DataCriacao,
-                    NomeUsuaria = a.Usuaria.Nome
+                    NomeUsuaria = a.Usuaria.Nome,
+                    ServicoTipo = a.ServicoTipo
                 }).ToList()
             })
             .FirstOrDefaultAsync();
 
         if (madrinhaDb == null)
             return NotFound(new { mensagem = "Madrinha não encontrada." });
+
+        // Calcular estatísticas categorizadas por serviço
+        var mediaPorServico = new System.Collections.Generic.Dictionary<string, double>();
+        var qtdPorServico = new System.Collections.Generic.Dictionary<string, int>();
+
+        var servicosAtivos = new[] { "Dicas Locais", "Ligação/Suporte", "Busca no Aeroporto", "Acompanhamento Presencial" };
+        foreach (var s in servicosAtivos)
+        {
+            var avs = madrinhaDb.Avaliacoes.Where(a => !string.IsNullOrEmpty(a.ServicoTipo) && a.ServicoTipo.Equals(s, StringComparison.OrdinalIgnoreCase)).ToList();
+            if (avs.Any())
+            {
+                mediaPorServico[s] = Math.Round(avs.Average(a => a.Nota), 1);
+                qtdPorServico[s] = avs.Count;
+            }
+            else
+            {
+                mediaPorServico[s] = 0;
+                qtdPorServico[s] = 0;
+            }
+        }
 
         var madrinha = new MadrinhaSummaryDto
         {
@@ -109,7 +130,9 @@ public class MadrinhaController : ControllerBase
             Servicos = madrinhaDb.Servicos,
             QtdSolicitacoes = madrinhaDb.QtdSolicitacoes,
             MediaAvaliacao = madrinhaDb.MediaAvaliacao,
-            Avaliacoes = madrinhaDb.Avaliacoes
+            Avaliacoes = madrinhaDb.Avaliacoes,
+            MediaPorServico = mediaPorServico,
+            QtdPorServico = qtdPorServico
         };
 
         return Ok(madrinha);
@@ -145,6 +168,11 @@ public class MadrinhaController : ControllerBase
                 Linkedin = m.Usuario.urlLinkedin,
                 Instagram = m.Usuario.urlInstagram,
                 Facebook = m.Usuario.urlFacebook,
+                TimeLocalNome = m.TimeLocal != null ? m.TimeLocal.Nome : "Nenhum",
+                AtivaFilaAlocacao = m.AtivaFilaAlocacao,
+                SlaMinutos = m.SlaMinutos,
+                Disponivel = m.Disponivel,
+                CargaAtendimentosAtivos = m.CargaAtendimentosAtivos,
                 Solicitacaoes = m.Solicitacoes.Select(s => new 
                 {
                     s.Id,
@@ -179,6 +207,11 @@ public class MadrinhaController : ControllerBase
             madrinhaDb.Linkedin,
             madrinhaDb.Instagram,
             madrinhaDb.Facebook,
+            madrinhaDb.TimeLocalNome,
+            madrinhaDb.AtivaFilaAlocacao,
+            madrinhaDb.SlaMinutos,
+            madrinhaDb.Disponivel,
+            madrinhaDb.CargaAtendimentosAtivos,
             madrinhaDb.Solicitacaoes,
             madrinhaDb.Servicos,
             madrinhaDb.QtdSolicitacoes
@@ -270,6 +303,48 @@ public class MadrinhaController : ControllerBase
         await _context.SaveChangesAsync();
 
         return Ok(new { mensagem = "Serviço removido com sucesso!" });
+    }
+
+    [HttpPut("profile/disponibilidade")]
+    [Authorize(Roles = "Madrinha")]
+    public async Task<IActionResult> AlternarDisponibilidade()
+    {
+        var usuariaAutenticada = await ObterUsuarioAutenticadoAsync();
+        if (usuariaAutenticada == null)
+            return Unauthorized(new { mensagem = "Usuária não autenticada." });
+
+        var madrinha = await _context.Set<Madrinha>()
+            .FirstOrDefaultAsync(m => m.UsuarioID == usuariaAutenticada.Id);
+
+        if (madrinha == null)
+            return NotFound(new { mensagem = "Perfil de madrinha não encontrado." });
+
+        madrinha.Disponivel = !madrinha.Disponivel;
+        _context.Update(madrinha);
+        await _context.SaveChangesAsync();
+
+        return Ok(new { mensagem = "Disponibilidade alterada com sucesso!", disponivel = madrinha.Disponivel });
+    }
+
+    [HttpPut("profile/reativar-fila")]
+    [Authorize(Roles = "Madrinha")]
+    public async Task<IActionResult> ReativarFila()
+    {
+        var usuariaAutenticada = await ObterUsuarioAutenticadoAsync();
+        if (usuariaAutenticada == null)
+            return Unauthorized(new { mensagem = "Usuária não autenticada." });
+
+        var madrinha = await _context.Set<Madrinha>()
+            .FirstOrDefaultAsync(m => m.UsuarioID == usuariaAutenticada.Id);
+
+        if (madrinha == null)
+            return NotFound(new { mensagem = "Perfil de madrinha não encontrado." });
+
+        madrinha.AtivaFilaAlocacao = true;
+        _context.Update(madrinha);
+        await _context.SaveChangesAsync();
+
+        return Ok(new { mensagem = "Fila de alocação automática reativada com sucesso!", ativaFilaAlocacao = madrinha.AtivaFilaAlocacao });
     }
 
     private async Task<Usuaria?> ObterUsuarioAutenticadoAsync()

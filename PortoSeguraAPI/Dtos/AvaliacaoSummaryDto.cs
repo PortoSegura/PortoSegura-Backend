@@ -7,4 +7,5 @@ public class AvaliacaoSummaryDto
     public string Comentario { get; set; } = string.Empty;
     public DateTime DataCriacao { get; set; }
     public string NomeUsuaria { get; set; } = string.Empty;
+    public string? ServicoTipo { get; set; }
 }

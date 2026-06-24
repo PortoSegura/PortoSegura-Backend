@@ -77,6 +77,70 @@ public class SolicitacoesController : ControllerBase
         return Ok(MapearSolicitacao(solicitacao));
     }
 
+    [HttpPost("cadastrar-viagem")]
+    [Authorize]
+    public async Task<IActionResult> CadastrarViagem([FromBody] PortoSeguraAPI.Dtos.CadastrarViagemRequest request)
+    {
+        var usuariaAutenticada = await ObterUsuarioAutenticadoAsync();
+        if (usuariaAutenticada == null)
+        {
+            return Unauthorized(new { mensagem = "Usuária não autenticada." });
+        }
+
+        if (request.DataFim <= request.DataInicio)
+        {
+            return BadRequest(new { mensagem = "A data final deve ser maior que a data inicial." });
+        }
+
+        var destinoNormalizado = request.Destino.Trim().ToLower();
+        var timeLocal = await _context.Set<TimeLocal>()
+            .FirstOrDefaultAsync(t => t.Cidade.ToLower().Contains(destinoNormalizado) || t.Nome.ToLower().Contains(destinoNormalizado));
+
+        if (timeLocal == null)
+        {
+            return BadRequest(new { mensagem = "Destino inválido ou time local não ativo." });
+        }
+
+        var dataPartida = request.DataInicio;
+        var dataRetorno = request.DataFim;
+        int diarias = (int)Math.Max(1, Math.Ceiling((dataRetorno - dataPartida).TotalDays));
+
+        // Encerra ou finaliza viagens abertas anteriores
+        var viagensAtivas = await _context.Set<Solicitacao>()
+            .Where(s => s.UsuariaId == usuariaAutenticada.Id && (s.Status == "Aberta" || s.Status == "Aceita"))
+            .ToListAsync();
+        foreach (var v in viagensAtivas)
+        {
+            v.Status = "Finalizada";
+        }
+
+        var solicitacao = new Solicitacao
+        {
+            UsuariaId = usuariaAutenticada.Id,
+            MadrinhaId = null,
+            Destino = $"{timeLocal.Cidade}, {timeLocal.Estado}",
+            Descricao = $"Viagem assistida para {timeLocal.Cidade}.",
+            DataInicio = dataPartida,
+            DataFim = dataRetorno,
+            QtdDiarias = diarias,
+            Status = "Aberta",
+            Valor = 0,
+            DataCriacao = DateTime.UtcNow,
+            Usuaria = usuariaAutenticada,
+            Madrinha = null
+        };
+
+        _context.Set<Solicitacao>().Add(solicitacao);
+        await _context.SaveChangesAsync();
+
+        return Ok(new
+        {
+            mensagem = "Viagem cadastrada com sucesso!",
+            solicitacaoId = solicitacao.Id,
+            destino = solicitacao.Destino
+        });
+    }
+
     [HttpGet("minhas-solicitacoes")]
     [Authorize]
     public async Task<IActionResult> ObterMinhasSolicitacoes()

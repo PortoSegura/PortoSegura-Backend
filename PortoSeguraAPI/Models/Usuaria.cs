@@ -6,6 +6,7 @@ namespace PortoSeguraAPI.Models;
 public class Usuaria: IdentityUser<int>
 {
     public required string Nome { get; set; }
+    public int SaldoCreditos { get; set; } = 0;
     public required string Telefone { get; set; }
     public required UserStatus Status { get; set; }
     public DateTime DataCriacao { get; set; } = DateTime.UtcNow;

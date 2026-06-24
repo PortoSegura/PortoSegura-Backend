@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using PortoSeguraAPI.Data;
@@ -11,9 +12,11 @@ using PortoSeguraAPI.Data;
 namespace PortoSeguraAPI.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260621131333_AddCreditsAndChat")]
+    partial class AddCreditsAndChat
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -206,13 +209,7 @@ namespace PortoSeguraAPI.Migrations
                     b.Property<int>("Nota")
                         .HasColumnType("integer");
 
-                    b.Property<string>("ServicoTipo")
-                        .HasColumnType("text");
-
-                    b.Property<int?>("SessaoChatId")
-                        .HasColumnType("integer");
-
-                    b.Property<int?>("SolicitacaoId")
+                    b.Property<int>("SolicitacaoId")
                         .HasColumnType("integer");
 
                     b.Property<int>("UsuariaId")
@@ -221,8 +218,6 @@ namespace PortoSeguraAPI.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("MadrinhaId");
-
-                    b.HasIndex("SessaoChatId");
 
                     b.HasIndex("SolicitacaoId");
 
@@ -292,24 +287,6 @@ namespace PortoSeguraAPI.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<DateTime?>("AcompanhamentoDataFim")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<DateTime?>("AcompanhamentoDataInicio")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<string>("AcompanhamentoHoraFim")
-                        .HasColumnType("text");
-
-                    b.Property<string>("AcompanhamentoHoraInicio")
-                        .HasColumnType("text");
-
-                    b.Property<string>("Aeroporto")
-                        .HasColumnType("text");
-
-                    b.Property<bool>("Avaliada")
-                        .HasColumnType("boolean");
-
                     b.Property<int>("CreditosConsumidos")
                         .HasColumnType("integer");
 
@@ -319,16 +296,7 @@ namespace PortoSeguraAPI.Migrations
                     b.Property<DateTime>("DataInicio")
                         .HasColumnType("timestamp without time zone");
 
-                    b.Property<DateTime?>("HorarioDesembarque")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<string>("LocaisVisitados")
-                        .HasColumnType("text");
-
-                    b.Property<int?>("MadrinhaId")
-                        .HasColumnType("integer");
-
-                    b.Property<int?>("QuantidadeHoras")
+                    b.Property<int>("MadrinhaId")
                         .HasColumnType("integer");
 
                     b.Property<bool>("Respondida")
@@ -348,17 +316,12 @@ namespace PortoSeguraAPI.Migrations
                     b.Property<DateTime?>("TempoLimite")
                         .HasColumnType("timestamp without time zone");
 
-                    b.Property<int?>("TimeLocalId")
-                        .HasColumnType("integer");
-
                     b.Property<int>("UsuariaId")
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
 
                     b.HasIndex("MadrinhaId");
-
-                    b.HasIndex("TimeLocalId");
 
                     b.HasIndex("UsuariaId");
 
@@ -565,7 +528,7 @@ namespace PortoSeguraAPI.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<int?>("MadrinhaId")
+                    b.Property<int>("MadrinhaId")
                         .HasColumnType("integer");
 
                     b.Property<int>("QtdDiarias")
@@ -640,15 +603,11 @@ namespace PortoSeguraAPI.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("PortoSeguraAPI.Models.SessaoChat", "SessaoChat")
-                        .WithMany()
-                        .HasForeignKey("SessaoChatId")
-                        .OnDelete(DeleteBehavior.Cascade);
-
                     b.HasOne("Solicitacao", "Solicitacao")
                         .WithMany("Avaliacoes")
                         .HasForeignKey("SolicitacaoId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.HasOne("PortoSeguraAPI.Models.Usuaria", "Usuaria")
                         .WithMany("Avaliacoes")
@@ -657,8 +616,6 @@ namespace PortoSeguraAPI.Migrations
                         .IsRequired();
 
                     b.Navigation("Madrinha");
-
-                    b.Navigation("SessaoChat");
 
                     b.Navigation("Solicitacao");
 
@@ -690,12 +647,8 @@ namespace PortoSeguraAPI.Migrations
                     b.HasOne("Madrinha", "Madrinha")
                         .WithMany()
                         .HasForeignKey("MadrinhaId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.HasOne("PortoSeguraAPI.Models.TimeLocal", "TimeLocal")
-                        .WithMany()
-                        .HasForeignKey("TimeLocalId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
                     b.HasOne("PortoSeguraAPI.Models.Usuaria", "Usuaria")
                         .WithMany()
@@ -704,8 +657,6 @@ namespace PortoSeguraAPI.Migrations
                         .IsRequired();
 
                     b.Navigation("Madrinha");
-
-                    b.Navigation("TimeLocal");
 
                     b.Navigation("Usuaria");
                 });
@@ -726,7 +677,8 @@ namespace PortoSeguraAPI.Migrations
                     b.HasOne("Madrinha", "Madrinha")
                         .WithMany("Solicitacoes")
                         .HasForeignKey("MadrinhaId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
                     b.HasOne("PortoSeguraAPI.Models.Usuaria", "Usuaria")
                         .WithMany("Solicitacoes")

@@ -9,6 +9,14 @@ public class Madrinha
     public bool VerificadoResidencia { get; set; } = false;
     public bool TrilhaCursoCompleto { get; set; } = false;
     public required string Motivacao { get; set; }
+    
+    // Governança, times e SLA
+    public int? TimeLocalId { get; set; }
+    public virtual TimeLocal? TimeLocal { get; set; }
+    public bool AtivaFilaAlocacao { get; set; } = true;
+    public int SlaMinutos { get; set; } = 15;
+    public bool Disponivel { get; set; } = true;
+    public int CargaAtendimentosAtivos { get; set; } = 0;
     public DateTime DataCriacao { get; set; } = DateTime.UtcNow;
     public string? DocumentoIdentidadeUrl { get; set; }
     public string? ComprovanteResidenciaUrl { get; set; }

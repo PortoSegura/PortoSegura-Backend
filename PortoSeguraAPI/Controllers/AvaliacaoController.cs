@@ -23,42 +23,87 @@ public class AvaliacaoController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> CriarAvaliacao([FromBody] CriarAvaliacaoRequest request)
     {
-        var solicitacao = await _context.Set<Solicitacao>().FindAsync(request.SolicitacaoId);
-
-        if(solicitacao == null) return BadRequest(new { message = "Solicitação não encontrada." });
-
         var usuaria = await ObterUsuarioAutenticadoAsync();
-        if (usuaria == null) return Unauthorized( new { message = "Usuária não autenticada." });
-        if (solicitacao.UsuariaId != usuaria.Id && solicitacao.MadrinhaId != usuaria.Id) return Forbid();
-
-        if (solicitacao.Status != "Concluida")
-        {
-            return BadRequest(new { message = "Apenas solicitações concluídas podem ser avaliadas." });
-        }
+        if (usuaria == null) return Unauthorized(new { message = "Usuária não autenticada." });
 
         if (request.Nota < 1 || request.Nota > 5)
         {
             return BadRequest(new { message = "A nota deve ser entre 1 e 5." });
         }
-        
-        var avaliacao = new Avaliacao
+
+        // 1. Avaliação vinculada ao serviço (SessaoChat)
+        if (request.SessaoChatId.HasValue)
         {
-            SolicitacaoId = request.SolicitacaoId,
-            MadrinhaId = request.MadrinhaId,
-            UsuariaId = usuaria.Id,
-            Nota = request.Nota,
-            Comentario = request.Comentario,
-            IsAvaliacaoMadrinha = solicitacao.UsuariaId == usuaria.Id
-        };
+            var sessao = await _context.Set<SessaoChat>().FindAsync(request.SessaoChatId.Value);
+            if (sessao == null)
+                return NotFound(new { message = "Sessão de serviço não encontrada." });
 
-        _context.Set<Avaliacao>().Add(avaliacao);
+            if (sessao.UsuariaId != usuaria.Id)
+                return Forbid();
 
-        solicitacao.Status = "Avaliada";
-        _context.Set<Solicitacao>().Update(solicitacao);
+            if (sessao.Status != "Finalizada" && sessao.Status != "Expirada")
+                return BadRequest(new { message = "Apenas serviços finalizados ou expirados podem ser avaliados." });
 
-        await _context.SaveChangesAsync();
+            if (!sessao.MadrinhaId.HasValue)
+                return BadRequest(new { message = "Este serviço não possui uma Madrinha associada para avaliar." });
 
-        return Ok(new { message = "Avaliação criada com sucesso!" });
+            if (sessao.Avaliada)
+                return BadRequest(new { message = "Este serviço já foi avaliado anteriormente." });
+
+            var avaliacaoServico = new Avaliacao
+            {
+                SessaoChatId = request.SessaoChatId.Value,
+                ServicoTipo = sessao.ServicoTipo,
+                MadrinhaId = sessao.MadrinhaId.Value,
+                UsuariaId = usuaria.Id,
+                Nota = request.Nota,
+                Comentario = request.Comentario,
+                IsAvaliacaoMadrinha = true,
+                SolicitacaoId = null
+            };
+
+            _context.Set<Avaliacao>().Add(avaliacaoServico);
+
+            sessao.Avaliada = true;
+            _context.Set<SessaoChat>().Update(sessao);
+
+            await _context.SaveChangesAsync();
+            return Ok(new { message = "Serviço avaliado com sucesso!" });
+        }
+
+        // 2. Fallback para avaliação de viagem legada (Solicitacao)
+        if (request.SolicitacaoId.HasValue)
+        {
+            var solicitacao = await _context.Set<Solicitacao>().FindAsync(request.SolicitacaoId.Value);
+            if (solicitacao == null) return BadRequest(new { message = "Solicitação de viagem não encontrada." });
+
+            if (solicitacao.UsuariaId != usuaria.Id && solicitacao.MadrinhaId != usuaria.Id) return Forbid();
+
+            if (solicitacao.Status != "Concluida")
+            {
+                return BadRequest(new { message = "Apenas solicitações concluídas podem ser avaliadas." });
+            }
+
+            var avaliacaoViagem = new Avaliacao
+            {
+                SolicitacaoId = request.SolicitacaoId.Value,
+                MadrinhaId = request.MadrinhaId,
+                UsuariaId = usuaria.Id,
+                Nota = request.Nota,
+                Comentario = request.Comentario,
+                IsAvaliacaoMadrinha = solicitacao.UsuariaId == usuaria.Id
+            };
+
+            _context.Set<Avaliacao>().Add(avaliacaoViagem);
+
+            solicitacao.Status = "Avaliada";
+            _context.Set<Solicitacao>().Update(solicitacao);
+
+            await _context.SaveChangesAsync();
+            return Ok(new { message = "Viagem avaliada com sucesso!" });
+        }
+
+        return BadRequest(new { message = "É necessário fornecer o id do serviço (SessaoChatId) ou o id da viagem (SolicitacaoId) para avaliar." });
     }
 
     [HttpDelete("{id}")]

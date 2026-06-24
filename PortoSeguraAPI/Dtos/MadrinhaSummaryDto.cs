@@ -19,4 +19,6 @@ public class MadrinhaSummaryDto
     public ICollection<AvaliacaoSummaryDto> Avaliacoes { get; set; } = new List<AvaliacaoSummaryDto>();
     // Servicos descrições
     public List<string> Servicos { get; set; } = new List<string>();
+    public System.Collections.Generic.Dictionary<string, double>? MediaPorServico { get; set; }
+    public System.Collections.Generic.Dictionary<string, int>? QtdPorServico { get; set; }
 }

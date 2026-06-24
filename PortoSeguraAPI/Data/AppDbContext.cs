@@ -43,6 +43,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
                 .WithOne()
                 .HasForeignKey(s => s.MadrinhaId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(m => m.TimeLocal)
+                .WithMany()
+                .HasForeignKey(m => m.TimeLocalId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
 
         builder.Entity<Avaliacao>(entity =>
@@ -61,6 +66,13 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
             entity.HasOne(a => a.Solicitacao)
                 .WithMany(s => s.Avaliacoes)
                 .HasForeignKey(a => a.SolicitacaoId)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(a => a.SessaoChat)
+                .WithMany()
+                .HasForeignKey(a => a.SessaoChatId)
+                .IsRequired(false)
                 .OnDelete(DeleteBehavior.Cascade);
         });
         
@@ -80,6 +92,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
             entity.HasOne(s => s.Madrinha)
                 .WithMany(m => m.Solicitacoes)
                 .HasForeignKey(s => s.MadrinhaId)
+                .IsRequired(false)
                 .OnDelete(DeleteBehavior.Restrict);
         });
 
@@ -90,6 +103,50 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
             entity.HasOne<Usuaria>()
                 .WithMany(u => u.Documentos)
                 .HasForeignKey(d => d.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<TimeLocal>(entity =>
+        {
+            entity.ToTable("TimesLocais");
+        });
+
+        builder.Entity<TransacaoCredito>(entity =>
+        {
+            entity.ToTable("TransacoesCredito");
+            entity.HasOne(t => t.Usuaria)
+                .WithMany()
+                .HasForeignKey(t => t.UsuariaId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<SessaoChat>(entity =>
+        {
+            entity.ToTable("SessoesChat");
+            entity.HasOne(s => s.Usuaria)
+                .WithMany()
+                .HasForeignKey(s => s.UsuariaId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(s => s.Madrinha)
+                .WithMany()
+                .HasForeignKey(s => s.MadrinhaId)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(s => s.TimeLocal)
+                .WithMany()
+                .HasForeignKey(s => s.TimeLocalId)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        builder.Entity<MensagemChat>(entity =>
+        {
+            entity.ToTable("MensagensChat");
+            entity.HasOne(m => m.SessaoChat)
+                .WithMany()
+                .HasForeignKey(m => m.SessaoChatId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
 

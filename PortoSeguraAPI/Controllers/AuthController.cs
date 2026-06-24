@@ -169,6 +169,7 @@ public class AuthController : ControllerBase
                 usuario.urlLinkedin,
                 usuario.urlInstagram,
                 usuario.urlFacebook,
+                usuario.SaldoCreditos,
                 FotoPerfilUrl = _blobStorageService.GerarUrlDeLeitura(usuario.FotoPerfilUrl),
                 Roles = roles.ToList()
             }

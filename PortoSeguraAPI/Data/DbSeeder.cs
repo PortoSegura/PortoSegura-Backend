@@ -53,8 +53,8 @@ public static class DbSeeder
             bio: "Perfil de madrinha para testar listagem e pareamento.",
             status: UserStatus.Ativo,
             senha: "Senha@12345",
-            estado: "MG",
-            cidade: "Belo Horizonte",
+            estado: "PE",
+            cidade: "Recife",
             videoVerificacao: "https://example.com/video3"
         );
 
@@ -91,7 +91,48 @@ public static class DbSeeder
         await EnsureRoleAssignmentAsync(userManager, operador, "Operador");
         await EnsureRoleAssignmentAsync(userManager, admin, "Admin");
 
-        await EnsureMadrinhaAsync(context, madrinhaUsuario);
+        var timeRecife = await EnsureTimeLocalAsync(context, "Time Recife", "Recife", "PE");
+
+        await EnsureMadrinhaAsync(context, madrinhaUsuario, timeRecife.Id);
+
+        // Seed Daniela Silva (Recife, PE)
+        var madrinhaRecifeUsuario1 = await EnsureUserAsync(
+            userManager,
+            nome: "Daniela Silva",
+            email: "daniela.silva@portosegura.local",
+            telefone: "81990000001",
+            bio: "Madrinha experiente baseada em Recife, especialista em turismo histórico.",
+            status: UserStatus.Ativo,
+            senha: "Senha@12345",
+            estado: "PE",
+            cidade: "Recife",
+            videoVerificacao: "https://example.com/video6"
+        );
+        await EnsureRoleAssignmentAsync(userManager, madrinhaRecifeUsuario1, "Madrinha");
+        await EnsureRoleAssignmentAsync(userManager, madrinhaRecifeUsuario1, "Usuaria");
+        await EnsureMadrinhaAsync(context, madrinhaRecifeUsuario1, timeRecife.Id);
+
+        // Seed Fernanda Souza (Recife, PE)
+        var madrinhaRecifeUsuario2 = await EnsureUserAsync(
+            userManager,
+            nome: "Fernanda Souza",
+            email: "fernanda.souza@portosegura.local",
+            telefone: "81990000002",
+            bio: "Madrinha dedicada do Time Recife, adora gastronomia local e praias.",
+            status: UserStatus.Ativo,
+            senha: "Senha@12345",
+            estado: "PE",
+            cidade: "Recife",
+            videoVerificacao: "https://example.com/video7"
+        );
+        await EnsureRoleAssignmentAsync(userManager, madrinhaRecifeUsuario2, "Madrinha");
+        await EnsureRoleAssignmentAsync(userManager, madrinhaRecifeUsuario2, "Usuaria");
+        await EnsureMadrinhaAsync(context, madrinhaRecifeUsuario2, timeRecife.Id);
+
+        // Atualizar saldo de créditos da usuária de teste
+        usuariaAtiva.SaldoCreditos = 40;
+        await userManager.UpdateAsync(usuariaAtiva);
+
         await EnsureSolicitacoesAsync(context, usuariaAtiva, madrinhaUsuario);
     }
 
@@ -169,13 +210,30 @@ public static class DbSeeder
         }
     }
 
-    private static async Task EnsureMadrinhaAsync(AppDbContext context, Usuaria madrinhaUsuario)
+    private static async Task<TimeLocal> EnsureTimeLocalAsync(AppDbContext context, string nome, string cidade, string estado)
+    {
+        var time = await context.Set<TimeLocal>().FirstOrDefaultAsync(t => t.Nome == nome);
+        if (time == null)
+        {
+            time = new TimeLocal { Nome = nome, Cidade = cidade, Estado = estado };
+            context.Add(time);
+            await context.SaveChangesAsync();
+        }
+        return time;
+    }
+
+    private static async Task EnsureMadrinhaAsync(AppDbContext context, Usuaria madrinhaUsuario, int? timeLocalId = null)
     {
         var exists = await context.Set<Madrinha>()
-            .AnyAsync(m => m.UsuarioID == madrinhaUsuario.Id);
+            .FirstOrDefaultAsync(m => m.UsuarioID == madrinhaUsuario.Id);
 
-        if (exists)
+        if (exists != null)
         {
+            if (timeLocalId.HasValue && exists.TimeLocalId != timeLocalId)
+            {
+                exists.TimeLocalId = timeLocalId;
+                await context.SaveChangesAsync();
+            }
             return;
         }
 
@@ -188,7 +246,8 @@ public static class DbSeeder
             TrilhaCursoCompleto = true,
             Motivacao = "Quero ajudar outras mulheres a terem mais seguranca e autonomia.",
             DataCriacao = DateTime.UtcNow,
-            Usuario = madrinhaUsuario
+            Usuario = madrinhaUsuario,
+            TimeLocalId = timeLocalId
         });
 
         await context.SaveChangesAsync();
