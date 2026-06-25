@@ -204,7 +204,7 @@ public class SolicitacoesController : ControllerBase
             s.Valor,
             s.Status,
             s.DataCriacao,
-            Madrinha = new
+            Madrinha = s.Madrinha == null ? null : new
             {
                 s.Madrinha.Id,
                 s.Madrinha.Nome,

@@ -30,6 +30,9 @@ public class SessaoChat
     public string? AcompanhamentoHoraFim { get; set; }
     public bool Avaliada { get; set; } = false;
 
+    public string? PontoEncontro { get; set; }
+    public string? DuvidaInicial { get; set; }
+
     // Propriedades de navegação
     public virtual Usuaria Usuaria { get; set; } = null!;
     public virtual Madrinha? Madrinha { get; set; } = null!;

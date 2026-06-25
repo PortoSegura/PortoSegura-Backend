@@ -79,6 +79,8 @@ public class ChatController : ControllerBase
                 s.AcompanhamentoHoraInicio,
                 s.AcompanhamentoHoraFim,
                 s.Avaliada,
+                s.PontoEncontro,
+                s.DuvidaInicial,
                 ViajanteNome = s.Usuaria.Nome,
                 ViajanteFotoPerfilUrl = _blobStorageService.GerarUrlDeLeitura(s.Usuaria.FotoPerfilUrl),
                 ViajanteCidade = s.Usuaria.Cidade,
@@ -155,12 +157,34 @@ public class ChatController : ControllerBase
             })
             .ToListAsync();
 
+        string? madrinhaNome = null;
+        string? madrinhaFotoPerfilUrl = null;
+        double madrinhaMediaAvaliacao = 0.0;
+
+        if (sessao.MadrinhaId.HasValue)
+        {
+            var madrinha = await _context.Set<Madrinha>()
+                .Include(m => m.Usuario)
+                .Include(m => m.Avaliacoes)
+                .FirstOrDefaultAsync(m => m.Id == sessao.MadrinhaId.Value);
+
+            if (madrinha != null)
+            {
+                madrinhaNome = madrinha.Usuario.Nome;
+                madrinhaFotoPerfilUrl = _blobStorageService.GerarUrlDeLeitura(madrinha.Usuario.FotoPerfilUrl);
+                madrinhaMediaAvaliacao = madrinha.Avaliacoes.Any() ? madrinha.Avaliacoes.Average(a => a.Nota) : 5.0;
+            }
+        }
+
         return Ok(new
         {
             sessaoStatus = sessao.Status,
             tempoLimite = sessao.TempoLimite,
             slaLimite = sessao.SlaLimite,
             respondida = sessao.Respondida,
+            madrinhaNome,
+            madrinhaFotoPerfilUrl,
+            madrinhaMediaAvaliacao,
             mensagens
         });
     }
@@ -263,13 +287,17 @@ public class ChatController : ControllerBase
                 break;
             case "ligacao/suporte":
             case "ligação/suporte":
+            case "ligação suporte":
+            case "ligacao suporte":
                 custo = 3;
                 break;
             case "busca no aeroporto":
             case "busca aeroporto":
-                custo = 10;
+            case "apoio aeroporto":
+                custo = 12; // Aligned with mobile UI (12 credits) and web UI (10/12 credits)
                 break;
             case "acompanhamento presencial":
+            case "acompanhamento":
                 if (request.AcompanhamentoDataInicio.HasValue && request.AcompanhamentoDataFim.HasValue)
                 {
                     var dataInicio = request.AcompanhamentoDataInicio.Value;
@@ -304,7 +332,7 @@ public class ChatController : ControllerBase
                 }
                 break;
             default:
-                return BadRequest(new { mensagem = "Tipo de serviço inválido." });
+                return BadRequest(new { mensagem = $"Tipo de serviço inválido: '{request.ServicoTipo}'." });
         }
 
         // 3. Verificar se a viajante possui créditos suficientes
@@ -352,7 +380,9 @@ public class ChatController : ControllerBase
                 AcompanhamentoDataFim = request.AcompanhamentoDataFim,
                 AcompanhamentoHoraInicio = request.AcompanhamentoHoraInicio,
                 AcompanhamentoHoraFim = request.AcompanhamentoHoraFim,
-                Avaliada = false
+                Avaliada = false,
+                PontoEncontro = request.PontoEncontro,
+                DuvidaInicial = request.DuvidaInicial
             };
 
             _context.Add(sessao);
@@ -379,6 +409,19 @@ public class ChatController : ControllerBase
             };
             _context.Add(msgSistema);
             await _context.SaveChangesAsync();
+
+            if (!string.IsNullOrWhiteSpace(request.DuvidaInicial))
+            {
+                var msgDuvida = new MensagemChat
+                {
+                    SessaoChatId = sessao.Id,
+                    RemetenteId = usuario.Id,
+                    Texto = request.DuvidaInicial,
+                    DataCriacao = DateTime.UtcNow
+                };
+                _context.Add(msgDuvida);
+                await _context.SaveChangesAsync();
+            }
 
             await transaction.CommitAsync();
 
@@ -435,6 +478,8 @@ public class ChatController : ControllerBase
                 s.AcompanhamentoDataFim,
                 s.AcompanhamentoHoraInicio,
                 s.AcompanhamentoHoraFim,
+                s.PontoEncontro,
+                s.DuvidaInicial,
                 ViajanteNome = s.Usuaria.Nome,
                 ViajanteFotoPerfilUrl = _blobStorageService.GerarUrlDeLeitura(s.Usuaria.FotoPerfilUrl),
                 ViajanteEmail = s.Usuaria.Email,
@@ -741,6 +786,44 @@ public class ChatController : ControllerBase
 
         return await _userManager.FindByIdAsync(id.ToString());
     }
+
+    [HttpPost("sessoes/{sessaoId}/webrtc/signal")]
+    public async Task<IActionResult> EnviarSinalWebRtc(int sessaoId, [FromBody] WebRtcSignalRequest request)
+    {
+        var usuario = await ObterUsuarioAutenticadoAsync();
+        if (usuario == null)
+            return Unauthorized(new { mensagem = "Usuária não autenticada." });
+
+        var signal = new WebRtcSignal
+        {
+            Type = request.Type,
+            Sdp = request.Sdp,
+            Candidate = request.Candidate,
+            SdpMid = request.SdpMid,
+            SdpMLineIndex = request.SdpMLineIndex,
+            SenderId = usuario.Id
+        };
+
+        WebRtcSignalingManager.SendSignal(sessaoId, signal);
+        return Ok(new { mensagem = "Sinal enviado com sucesso!" });
+    }
+
+    [HttpGet("sessoes/{sessaoId}/webrtc/signals")]
+    public async Task<IActionResult> ObterSinaisWebRtc(int sessaoId, [FromQuery] string sinceUtc)
+    {
+        var usuario = await ObterUsuarioAutenticadoAsync();
+        if (usuario == null)
+            return Unauthorized(new { mensagem = "Usuária não autenticada." });
+
+        DateTime since = DateTime.MinValue;
+        if (!string.IsNullOrEmpty(sinceUtc) && DateTime.TryParse(sinceUtc, out var dt))
+        {
+            since = dt.ToUniversalTime();
+        }
+
+        var signals = WebRtcSignalingManager.GetSignals(sessaoId, since);
+        return Ok(signals);
+    }
 }
 
 public class EnviarMensagemRequest
@@ -760,4 +843,75 @@ public class IniciarServicoRequest
     public DateTime? AcompanhamentoDataFim { get; set; }
     public string? AcompanhamentoHoraInicio { get; set; }
     public string? AcompanhamentoHoraFim { get; set; }
+    public string? PontoEncontro { get; set; }
+    public string? DuvidaInicial { get; set; }
+}
+
+public class WebRtcSignalRequest
+{
+    public required string Type { get; set; } // "offer", "answer", "candidate", "hangup"
+    public string? Sdp { get; set; }
+    public string? Candidate { get; set; }
+    public string? SdpMid { get; set; }
+    public int? SdpMLineIndex { get; set; }
+}
+
+public class WebRtcSignal
+{
+    public int Id { get; set; }
+    public required string Type { get; set; }
+    public string? Sdp { get; set; }
+    public string? Candidate { get; set; }
+    public string? SdpMid { get; set; }
+    public int? SdpMLineIndex { get; set; }
+    public int SenderId { get; set; }
+    public DateTime Timestamp { get; set; } = DateTime.UtcNow;
+}
+
+public static class WebRtcSignalingManager
+{
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<int, List<WebRtcSignal>> _signals = new();
+    private static int _nextSignalId = 1;
+    private static readonly object _lock = new();
+
+    public static void SendSignal(int sessaoId, WebRtcSignal signal)
+    {
+        lock (_lock)
+        {
+            signal.Id = _nextSignalId++;
+            signal.Timestamp = DateTime.UtcNow;
+            
+            var list = _signals.GetOrAdd(sessaoId, _ => new List<WebRtcSignal>());
+            list.Add(signal);
+            
+            if (list.Count > 100)
+            {
+                list.RemoveRange(0, list.Count - 100);
+            }
+        }
+    }
+
+    public static List<WebRtcSignal> GetSignals(int sessaoId, DateTime since)
+    {
+        var result = new List<WebRtcSignal>();
+        if (_signals.TryGetValue(sessaoId, out var list))
+        {
+            lock (_lock)
+            {
+                foreach (var signal in list)
+                {
+                    if (signal.Timestamp > since)
+                    {
+                        result.Add(signal);
+                    }
+                }
+            }
+        }
+        return result;
+    }
+
+    public static void ClearSession(int sessaoId)
+    {
+        _signals.TryRemove(sessaoId, out _);
+    }
 }
