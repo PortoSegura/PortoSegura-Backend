@@ -79,13 +79,15 @@ public class CarteiraController : ControllerBase
                 break;
             case "segurancatotal":
             case "seguranca total":
+            case "segurança total":
                 creditos = 40;
                 preco = 250.00m;
                 break;
             case "imersaorecife":
             case "imersao recife":
+            case "imersão recife":
                 creditos = 70;
-                preco = 400.00m;
+                preco = 430.00m;
                 break;
             default:
                 return BadRequest(new { mensagem = "Pacote de créditos inválido." });

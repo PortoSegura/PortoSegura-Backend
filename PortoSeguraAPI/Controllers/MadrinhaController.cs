@@ -193,6 +193,9 @@ public class MadrinhaController : ControllerBase
         if (madrinhaDb == null)
             return NotFound(new { mensagem = "Perfil de madrinha não encontrado." });
 
+        int atendimentosAtivosReal = await _context.Set<SessaoChat>()
+            .CountAsync(s => s.MadrinhaId == madrinhaDb.Id && s.Status == "Ativa");
+
         var madrinha = new
         {
             madrinhaDb.Id,
@@ -213,7 +216,7 @@ public class MadrinhaController : ControllerBase
             madrinhaDb.AtivaFilaAlocacao,
             madrinhaDb.SlaMinutos,
             madrinhaDb.Disponivel,
-            madrinhaDb.CargaAtendimentosAtivos,
+            CargaAtendimentosAtivos = atendimentosAtivosReal,
             madrinhaDb.Solicitacaoes,
             madrinhaDb.Servicos,
             madrinhaDb.QtdSolicitacoes
