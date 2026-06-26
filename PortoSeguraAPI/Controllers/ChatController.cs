@@ -185,6 +185,8 @@ public class ChatController : ControllerBase
             madrinhaNome,
             madrinhaFotoPerfilUrl,
             madrinhaMediaAvaliacao,
+            avaliada = sessao.Avaliada,
+            madrinhaId = sessao.MadrinhaId,
             mensagens
         });
     }
