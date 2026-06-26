@@ -169,25 +169,7 @@ public class SolicitacoesController : ControllerBase
                 s.QtdDiarias,
                 s.Valor,
                 s.Status,
-                s.DataCriacao,
-                Madrinha = new
-                {
-                    s.Madrinha.Id,
-                    Nome = s.Madrinha.Usuario.Nome,
-                    Telefone = s.Status == "Aceita" ? s.Madrinha.Usuario.Telefone : null,
-                    s.Madrinha.PrecoDiaria,
-                    s.Madrinha.VerificadoIdentidade,
-                    s.Madrinha.VerificadoResidencia,
-                    s.Madrinha.TrilhaCursoCompleto,
-                    RawFotoPerfilUrl = s.Madrinha.Usuario.FotoPerfilUrl
-                },
-                Avaliacao = s.Avaliacoes.Select(a => new
-                {
-                    a.Id,
-                    a.Nota,
-                    a.Comentario,
-                    a.DataCriacao
-                }).FirstOrDefault()
+                s.DataCriacao
             })
             .ToListAsync();
 
@@ -204,18 +186,6 @@ public class SolicitacoesController : ControllerBase
             s.Valor,
             s.Status,
             s.DataCriacao,
-            Madrinha = s.Madrinha == null ? null : new
-            {
-                s.Madrinha.Id,
-                s.Madrinha.Nome,
-                s.Madrinha.Telefone,
-                s.Madrinha.PrecoDiaria,
-                s.Madrinha.VerificadoIdentidade,
-                s.Madrinha.VerificadoResidencia,
-                s.Madrinha.TrilhaCursoCompleto,
-                FotoPerfilUrl = _blobStorageService.GerarUrlDeLeitura(s.Madrinha.RawFotoPerfilUrl)
-            },
-            s.Avaliacao
         }).ToList();
 
         return Ok(solicitacoes);

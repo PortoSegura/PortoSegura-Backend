@@ -8,6 +8,7 @@ public class MadrinhaSummaryDto
     public decimal PrecoDiaria { get; set; }
     public string? FotoPerfilUrl { get; set; }
     public string Motivacao { get; set; } = string.Empty;
+    public string Bio { get; set; } = string.Empty;
 
     // Usuária resumida
     public int UsuarioId { get; set; }

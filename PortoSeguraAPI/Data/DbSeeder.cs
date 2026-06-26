@@ -24,11 +24,24 @@ public static class DbSeeder
             nome: "Ana Lima",
             email: "ana.lima@portosegura.local",
             telefone: "11990000001",
-            bio: "Usuaria ativa para testar cadastro, login e solicitacoes.",
+            bio: "Adoro viajar sozinha, mas prefiro me hospedar em lugares que ofereçam uma rede de apoio feminina. Busco uma experiência autêntica, com segurança e trocas culturais enriquecedoras.",
             status: UserStatus.Ativo,
             senha: "Senha@12345",
             estado: "SP",
             cidade: "São Paulo",
+            videoVerificacao: "https://example.com/video1"
+        );
+
+        var usuariaAtiva2 = await EnsureUserAsync(
+            userManager,
+            nome: "Roberta Oliveira",
+            email: "roberta.oliveira@portosegura.local",
+            telefone: "11990000001",
+            bio: "Adoro viajar sozinha, mas prefiro me hospedar em lugares que ofereçam uma rede de apoio feminina. Busco uma experiência autêntica, com segurança e trocas culturais enriquecedoras.",
+            status: UserStatus.Ativo,
+            senha: "Senha@12345",
+            estado: "RJ",
+            cidade: "Rio de Janeiro",
             videoVerificacao: "https://example.com/video1"
         );
 
@@ -37,7 +50,7 @@ public static class DbSeeder
             nome: "Bruna Martins",
             email: "bruna.martins@portosegura.local",
             telefone: "11990000002",
-            bio: "Conta pendente para validar a regra de aprovacao.",
+            bio: "Estou planejando minha primeira viagem solo para o Rio de Janeiro e adoraria o suporte de uma madrinha local para dicas de segurança e roteiros menos turísticos. Animada para começar!",
             status: UserStatus.Pendente,
             senha: "Senha@12345",
             estado: "RJ",
@@ -50,7 +63,7 @@ public static class DbSeeder
             nome: "Camila Souza",
             email: "camila.souza@portosegura.local",
             telefone: "11990000003",
-            bio: "Perfil de madrinha para testar listagem e pareamento.",
+            bio: "Sou apaixonada por viajar e também acredito no poder do acolhimento. Quando não estou viajando, gosto de ajudar outras mulheres a se sentirem em casa em suas jornadas.",
             status: UserStatus.Ativo,
             senha: "Senha@12345",
             estado: "PE",
@@ -85,6 +98,7 @@ public static class DbSeeder
         );
 
         await EnsureRoleAssignmentAsync(userManager, usuariaAtiva, "Usuaria");
+        await EnsureRoleAssignmentAsync(userManager, usuariaAtiva2, "Usuaria");
         await EnsureRoleAssignmentAsync(userManager, usuariaPendente, "Usuaria");
         await EnsureRoleAssignmentAsync(userManager, madrinhaUsuario, "Madrinha");
         await EnsureRoleAssignmentAsync(userManager, madrinhaUsuario, "Usuaria");
@@ -101,7 +115,7 @@ public static class DbSeeder
             nome: "Daniela Silva",
             email: "daniela.silva@portosegura.local",
             telefone: "81990000001",
-            bio: "Madrinha experiente baseada em Recife, especialista em turismo histórico.",
+            bio: "Nascida e criada no Recife, conheço cada detalhe do centro histórico e dos museus. Minha missão como madrinha é garantir que você não apenas conheça a cidade, mas se sinta segura e bem-vinda em cada esquina. Especialista em roteiros culturais e históricos.",
             status: UserStatus.Ativo,
             senha: "Senha@12345",
             estado: "PE",
@@ -118,7 +132,7 @@ public static class DbSeeder
             nome: "Fernanda Souza",
             email: "fernanda.souza@portosegura.local",
             telefone: "81990000002",
-            bio: "Madrinha dedicada do Time Recife, adora gastronomia local e praias.",
+            bio: "Madrinha do Time Recife, sou uma entusiasta da gastronomia local e das praias do litoral pernambucano. Se você busca dicas de onde comer bem, segredos dos moradores locais e um ambiente seguro e alegre, conte comigo para tornar sua estadia inesquecível.",
             status: UserStatus.Ativo,
             senha: "Senha@12345",
             estado: "PE",
@@ -244,7 +258,7 @@ public static class DbSeeder
             VerificadoIdentidade = true,
             VerificadoResidencia = true,
             TrilhaCursoCompleto = true,
-            Motivacao = "Quero ajudar outras mulheres a terem mais seguranca e autonomia.",
+            Motivacao = "Acredito que o acolhimento transforma viagens em vivências. Como madrinha em Recife, foco em oferecer um ambiente de confiança, trocas de experiências e suporte constante para mulheres que desejam explorar o Nordeste com autonomia.",
             DataCriacao = DateTime.UtcNow,
             Usuario = madrinhaUsuario,
             TimeLocalId = timeLocalId
